@@ -1,8 +1,8 @@
-drop table if exists ranks;
-drop table if exists users;
-drop table if exists equipment_types;
-drop table if exists parameters;
 drop table if exists packs;
+drop table if exists users;
+drop table if exists ranks;
+drop table if exists parameters;
+drop table if exists equipment_types;
 
 
 -- Звания/Должности
