@@ -40,96 +40,52 @@ insert into type_parameter(id, name, id_unit) values(5, 'Скорость вет
 insert into type_parameter(id, name, id_unit) values(6, 'Дальность сноса пуль', 1);
 
 
--- Значение параметра
-create table if not exists parameter_value(
-	id int primary key,
-	id_pack int references packs(id),
-	id_type_parameter int references type_parameter(id),
-	value decimal(4, 1)
-);
+-- Изменение существующей parameters
 
+alter table parameters add column if not exists id_pack int references packs(id);
+alter table parameters add column if not exists id_type_parameter int references type_parameter(id);
+alter table parameters add column if not exists value decimal(4, 1);
 
--- Переносим данные из старой parameters в parameter_value
+-- Заполняем новые колонки в уже существующих строках
+update parameters set id_pack = 1, id_type_parameter = 1, value = height where id = 1;
+update parameters set id_pack = 2, id_type_parameter = 1, value = height where id = 2;
 
+-- Добавляем недостающие строки для остальных параметров
+insert into parameters(id, id_pack, id_type_parameter, value)
+select 3, 1, 2, temperature from parameters where id = 1;
+insert into parameters(id, id_pack, id_type_parameter, value)
+select 4, 2, 2, temperature from parameters where id = 2;
 
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 1, packs.id, 1, parameters.height
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 1;
+insert into parameters(id, id_pack, id_type_parameter, value)
+select 5, 1, 3, pressure from parameters where id = 1;
+insert into parameters(id, id_pack, id_type_parameter, value)
+select 6, 2, 3, pressure from parameters where id = 2;
 
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 2, packs.id, 1, parameters.height
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 2;
+insert into parameters(id, id_pack, id_type_parameter, value)
+select 7, 1, 4, wind_direction from parameters where id = 1;
+insert into parameters(id, id_pack, id_type_parameter, value)
+select 8, 2, 4, wind_direction from parameters where id = 2;
 
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 3, packs.id, 2, parameters.temperature
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 1;
+insert into parameters(id, id_pack, id_type_parameter, value)
+select 9, 1, 5, wind_speed from parameters where id = 1 and wind_speed is not null;
+insert into parameters(id, id_pack, id_type_parameter, value)
+select 10, 2, 5, wind_speed from parameters where id = 2 and wind_speed is not null;
 
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 4, packs.id, 2, parameters.temperature
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 2;
+insert into parameters(id, id_pack, id_type_parameter, value)
+select 11, 1, 6, bullet_drift from parameters where id = 1 and bullet_drift is not null;
+insert into parameters(id, id_pack, id_type_parameter, value)
+select 12, 2, 6, bullet_drift from parameters where id = 2 and bullet_drift is not null;
 
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 5, packs.id, 3, parameters.pressure
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 1;
+-- Удаляем старые колонки
+alter table parameters drop column if exists height;
+alter table parameters drop column if exists temperature;
+alter table parameters drop column if exists pressure;
+alter table parameters drop column if exists wind_direction;
+alter table parameters drop column if exists wind_speed;
+alter table parameters drop column if exists bullet_drift;
 
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 6, packs.id, 3, parameters.pressure
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 2;
-
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 7, packs.id, 4, parameters.wind_direction
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 1;
-
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 8, packs.id, 4, parameters.wind_direction
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 2;
-
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 9, packs.id, 5, parameters.wind_speed
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 1 and parameters.wind_speed is not null;
-
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 10, packs.id, 5, parameters.wind_speed
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 2 and parameters.wind_speed is not null;
-
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 11, packs.id, 6, parameters.bullet_drift
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 1 and parameters.bullet_drift is not null;
-
-insert into parameter_value(id, id_pack, id_type_parameter, value)
-select 12, packs.id, 6, parameters.bullet_drift
-from packs
-join parameters on packs.id_parameter = parameters.id
-where packs.id = 2 and parameters.bullet_drift is not null;
-
-
--- Удаляем колонку связанную с табл. parameters
+-- Убираем колонку связанную со старой связью пачка -> parameters
 alter table packs drop column if exists id_parameter;
-
--- Удаляем всю таблицу parameters
-drop table if exists parameters;
 
 -- Исправляем дату измерения у тестовых пачек
 update packs set created_at = timestamp '2026-09-19 09:30:00' where id = 1;
@@ -142,9 +98,9 @@ select
 	users.full_name,
 	type_parameter.name as parameter_name,
 	unit.name as unit_name,
-	parameter_value.value
+	parameters.value
 from packs
 join users on packs.id_user = users.id
-join parameter_value on parameter_value.id_pack = packs.id
-join type_parameter on type_parameter.id = parameter_value.id_type_parameter
+join parameters on parameters.id_pack = packs.id
+join type_parameter on type_parameter.id = parameters.id_type_parameter
 join unit on unit.id = type_parameter.id_unit;
