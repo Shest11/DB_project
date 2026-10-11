@@ -10,7 +10,10 @@ do $$
 		);
 	
 		alter sequence base_unit_id_seq owned by base_unit.id;
-	
+
+		comment on table base_unit is 'Базовая ед. измерения';
+		comment on column base_unit.name is 'Название базовой ед. измерения';
+
 	
 		-- equipment_types
 		create sequence equipment_types_id_seq;
@@ -21,6 +24,9 @@ do $$
 		);
 	
 		alter sequence equipment_types_id_seq owned by equipment_types.id;
+
+		comment on table equipment_types is 'Тип измерительного устрой-ва';
+		comment on column equipment_types.name is 'Название измерительного устрой-ва';
 	
 	
 		-- packs
@@ -34,7 +40,11 @@ do $$
 	
 		alter sequence packs_id_seq owned by packs.id;
 	
-	
+		comment on table packs is 'Пачка';
+		comment on column packs.name is 'Название пачки';
+		comment on column packs.measurment_date is 'Дата измерения';
+		
+		
 		-- parameter_value
 		create sequence parameter_value_id_seq;
 	
@@ -44,7 +54,9 @@ do $$
 		);
 	
 		alter sequence parameter_value_id_seq owned by parameter_value.id;
-	
+
+		comment on table parameter_value is 'Значение параметра';
+		
 	
 		-- ranks
 		create sequence ranks_id_seq;
@@ -55,8 +67,11 @@ do $$
 		);
 	
 		alter sequence ranks_id_seq owned by ranks.id;
-	
-	
+
+		comment on table ranks is 'Звания/Должности';
+		comment on column ranks.name is 'Название звания/должности';
+		
+		
 		-- type_parameter
 		create sequence type_parameter_id_seq;
 	
@@ -66,6 +81,9 @@ do $$
 		);
 	
 		alter sequence type_parameter_id_seq owned by type_parameter.id;
+
+		comment on table type_parameter is 'Тип параметра';
+		comment on column type_parameter.name is 'Название типа параметра';
 	
 		-- unit
 		create sequence unit_id_seq;
@@ -76,7 +94,9 @@ do $$
 		);
 	
 		alter sequence unit_id_seq owned by unit.id;
-	
+
+		comment on table unit is 'Ед. измерения';
+		comment on column unit.name is 'Название ед. измерения';
 	
 		-- users
 		create sequence users_id_seq;
@@ -87,9 +107,25 @@ do $$
 		);
 	
 		alter sequence users_id_seq owned by users.id;
-	
+
+		comment on table users is 'Пользователь';
+		comment on column users.full_name is 'ФИО';
+
+		
 		-- temperature_correction
 		create sequence temperature_correction_id_seq;
+		
+		create table temperature_correction(
+			id int primary key default nextval('temperature_correction_id_seq'),
+			t0 decimal(4, 1),
+			delta_tv decimal(4, 1)
+		);
+
+		alter sequence temperature_correction_id_seq owned by temperature_correction.id;
+
+		comment on table temperature_correction is 'Температурная коррекция';
+		comment on column temperature_correction.t0 is 'Приземная температура воздуха';
+		comment on column temperature_correction.delta_tv is 'Виртуальная поправка';
 		
 	commit;
 
@@ -137,20 +173,32 @@ do $$
 
 		-- unit -> base_unit
 		alter table unit add column id_base_unit int references base_unit(id);
+
+		comment on column unit.id_base_unit is 'Код базовой ед. измерения';
 	
 		-- type_parameter -> unit
 		alter table type_parameter add column id_unit int references unit(id);
+
+		comment on column type_parameter.id_unit is 'Код ед. измерения';
 	
 		-- users -> ranks
 		alter table users add column id_rank int references ranks(id);
+
+		comment on column users.id_rank is 'Код звания/должности';
 	
 		-- packs -> users, packs -> equipment_types
 		alter table packs add column id_user int references users(id);
 		alter table packs add column id_equipment_type int references equipment_types(id);
+
+		comment on column packs.id_user is 'Код пользователя';
+		comment on column packs.id_equipment_type is 'Код измерительного устрой-ва';
 	
 		-- parameter_value -> packs, parameter_value -> type_parameter
 		alter table parameter_value add column id_pack int references packs(id);
 		alter table parameter_value add column id_type_parameter int references type_parameter(id);
+
+		comment on column parameter_value.id_pack is 'Код пачки';
+		comment on column parameter_value.id_type_parameter is 'Код типа параметра';
 	
 		-- связываем уже существующие тестовые данные
 		update users set id_rank = 1 where id = 1;
