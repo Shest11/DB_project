@@ -166,7 +166,19 @@ do $$
 		insert into parameter_value(value) values(100);
 		insert into parameter_value(value) values(25);
 		insert into parameter_value(value) values(765);
+
+		insert into temperature_correction(t0, delta_tv) values
+	    (-1.0, 0.0),
+	    (0.0, 0.5),
+	    (5.0, 0.5),
+	    (10.0, 1.0),
+	    (15.0, 1.0),
+	    (20.0, 1.5),
+	    (25.0, 2.0),
+	    (30, 3.5),
+	    (40, 4.5);
 	commit;
+	
 
 
 -- Связи между таблицами
