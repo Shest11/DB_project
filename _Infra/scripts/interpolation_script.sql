@@ -11,6 +11,12 @@ begin
 		when duplicate_object then null;
 	end;
 
+	comment on type four_points is 'Четыре опорные точки для вычисления интерполяции';
+	comment on column four_points.x0 is 'Левая опорная точка';
+	comment on column four_points.y0 is 'Значение в левой опорной точке';
+	comment on column four_points.x1 is 'Правая опорная точка';
+	comment on column four_points.y1 is 'Значение в правой опорной точке';
+
 	create or replace function get_my_points(par_temperature numeric(6, 2))
 	returns four_points
 	language plpgsql
@@ -48,6 +54,8 @@ begin
 	end;
 	$func$;
 
+	comment on function get_my_points(par_temperature numeric(6, 2)) is 'Получение четырех опорных точек (возвращает type four_points)'
+	
 
 	create or replace function calc_interpolation(x_value numeric(6, 2), points four_points)
 	returns numeric(6, 2)
@@ -65,5 +73,7 @@ begin
 		return y;
 	end;
 	$func2$;
+
+	comment on function calc_interpolation(x_value numeric(6, 2), points four_points) is 'Вычисление интерполированного значения виртуальной поправки';
 
 end $outer$;

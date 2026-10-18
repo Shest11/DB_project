@@ -14,4 +14,7 @@ begin
 	raise notice 'T=23 => y=%', y1;
 	raise notice 'T=25 => y=%', y2;
 
+	raise notice 'T=50 => y=%', calc_interpolation(50, get_my_points(50));
+	raise notice 'T=-50 => y=%', calc_interpolation(-50, get_my_points(-50));
+
 end $$;
