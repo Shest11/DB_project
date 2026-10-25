@@ -213,6 +213,27 @@ do $$
 		comment on column parameter_value.id_type_parameter is 'Код типа параметра';
 	
 		-- связываем уже существующие тестовые данные
+
+		update parameter_value set id_pack = 1, id_type_parameter = 1 where id = 1;
+	    -- id 2: Температура (25)
+	    update parameter_value set id_pack = 1, id_type_parameter = 2 where id = 2;
+	    -- id 3: Давление (765)
+	    update parameter_value set id_pack = 1, id_type_parameter = 3 where id = 3;
+
+		insert into parameter_value(value, id_pack, id_type_parameter) values
+		(100, 1, 1),
+		(25, 1, 2),
+		(765, 1, 3),
+		(45, 1, 4),
+		(5, 1, 5),
+		(12, 1, 6),
+		(105, 2, 1),
+		(22, 2, 2),
+		(760, 2, 3),
+		(30, 2, 4),
+		(7, 2, 5),
+		(15, 2, 6);
+
 		update users set id_rank = 1 where id = 1;
 		update users set id_rank = 2 where id = 2;
 	
