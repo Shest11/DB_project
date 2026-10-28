@@ -25,7 +25,7 @@ pack_errors as (
 select
 	users.full_name as "Пользователь",
 	count(*) filter (where pack_errors.has_error) as "Количество ошибок",
-	rank() over (order by count(*) filter (where pack_errors.has_error) desc) as "Место"
+	dense_rank() over (order by count(*) filter (where pack_errors.has_error) asc) as "Место"
 from pack_errors
 join users on users.id = pack_errors.id_user
 group by users.full_name;
