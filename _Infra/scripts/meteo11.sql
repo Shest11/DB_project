@@ -1,5 +1,11 @@
 do $$
 begin
+
+	DROP FUNCTION IF EXISTS calc_meteo11(timestamp, int, int, numeric);
+	DROP FUNCTION IF EXISTS calc_bbbtt(int, numeric);
+	DROP FUNCTION IF EXISTS calc_vvvv(int);
+	DROP FUNCTION IF EXISTS calc_ddchm(timestamp);
+
 	create or replace function calc_ddchm(par_datetime timestamp)
 	returns text
 	language plpgsql
@@ -47,9 +53,9 @@ begin
 		v_const_temperature numeric;
 	begin
 
-		select const_value into v_const_pressure where const_name = 'base_pressure';
+		select const_value into v_const_pressure from calc_constants where const_name = 'base_pressure';
 
-		select const_value into v_const_temperature where const_name = 'base_virtual_temperature';
+		select const_value into v_const_temperature from calc_constants where const_name = 'base_virtual_temperature';
 		
 		-- БББ
 		v_delta_pressure := par_pressure - v_const_pressure;
