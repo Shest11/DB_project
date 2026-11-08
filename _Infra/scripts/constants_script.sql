@@ -18,6 +18,6 @@ begin
 
 	insert into calc_constants(const_name, const_value, description) values
 	('base_pressure', 750, 'Табличное значение наземного давления, мм рт. ст.'),
-	('base_virtual_temperature', 15.9, 'Табличное значение приземной виртуальной температуры, °C')
+	('base_virtual_temperature', 15.9, 'Табличное значение приземной виртуальной температуры, °C');
 
 end $$;
