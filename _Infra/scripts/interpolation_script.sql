@@ -54,7 +54,7 @@ begin
 	end;
 	$func$;
 
-	comment on function get_my_points(par_temperature numeric(6, 2)) is 'Получение четырех опорных точек (возвращает type four_points)'
+	comment on function get_my_points(par_temperature numeric(6, 2)) is 'Получение четырех опорных точек (возвращает type four_points)';
 	
 
 	create or replace function calc_interpolation(x_value numeric(6, 2), points four_points)
