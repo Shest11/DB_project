@@ -328,6 +328,10 @@ begin
 		    
 		    var_pos integer;
 		    var_row integer[];
+
+		    var_const_circle integer;
+		    var_const_tens integer;
+		    var_const_offset integer;
 		    
 		    rec record;
 		begin
@@ -336,13 +340,14 @@ begin
 		        raise exception 'Ошибка параметров: %', public.check_param(par_params);
 		    end if;
 		
-		    -- получаем константу из БД
-		    select const_value into var_table_temp 
-		    from public.calc_constants 
-		    where const_name = 'base_virtual_temperature';
+		    -- получаем константы из БД
+		    select const_value into var_table_temp from public.calc_constants where const_name = 'base_virtual_temperature';
+		    select const_value into var_const_circle from public.calc_constants where const_name = 'goniometer_circle';
+		    select const_value into var_const_tens from public.calc_constants where const_name = 'temp_tens_base';
+		    select const_value into var_const_offset from public.calc_constants where const_name = 'negative_temp_offset';
 		    
-		    if var_table_temp is null then
-		        raise exception 'В calc_constants нет base_virtual_temperature';
+		    if var_table_temp is null or var_const_circle is null or var_const_tens is null or var_const_offset is null then
+		        raise exception 'В таблице calc_constants не хватает необходимых констант для расчета';
 		    end if;
 		
 		    -- временная таблица для результатов
@@ -352,7 +357,7 @@ begin
 		    
 		    truncate table temp_meteo_out;
 		
-		    -- настройка под оборудование (1 = ДМК, 2 = ВР)
+		    -- настройка под оборудование
 		    if par_params.equipment_type = 'ДМК' then
 		        var_type_speed := 6;
 		        var_type_dir := 7;
@@ -373,102 +378,79 @@ begin
 		    
 		    var_delta_t0 := round(par_params.temperature + var_delta_tv - var_table_temp)::integer;
 		
-		    var_tens  := (abs(var_delta_t0) / 10) * 10;
-		    var_units := abs(var_delta_t0) % 10;
+		    -- используем константу для десятков
+		    var_tens  := (abs(var_delta_t0) / var_const_tens) * var_const_tens;
+		    var_units := abs(var_delta_t0) % var_const_tens;
 		    
-		    -- 8 = Положительные, 9 = Отрицательные
 		    var_type_temp := case when var_delta_t0 < 0 then 9 else 8 end;
 		    
-		    -- Ищем, у кого брать заголовок: у самого типа (8 или 9) или у его родителя (1)
+		    -- ищем родителя для заголовков
 		    select coalesce(parent_id, id) into var_type_temp_head 
-		    from public.calc_correction_types 
-		    where id = var_type_temp;
+		    from public.calc_correction_types where id = var_type_temp;
 		
-		    -- проверка ветра на ноль (ниже первого столбца таблицы)
-		    select min(head_value) into var_x0 
-		    from public.header_values 
-		    where type_id = var_type_speed;
-		    
+		    -- проверка ветра на ноль
+		    select min(head_value) into var_x0 from public.header_values where type_id = var_type_speed;
 		    var_zero_wind := var_input < var_x0;
 		
-		    -- если ветер не нулевой, ищем ближайшие столбцы
 		    if not var_zero_wind then
-		        select max(head_value) into var_x0 
-		        from public.header_values 
-		        where type_id = var_type_speed and head_value <= var_input;
-		
-		        select min(head_value) into var_x1 
-		        from public.header_values 
-		        where type_id = var_type_speed and head_value >= var_input;
-		
+		        select max(head_value) into var_x0 from public.header_values where type_id = var_type_speed and head_value <= var_input;
+		        select min(head_value) into var_x1 from public.header_values where type_id = var_type_speed and head_value >= var_input;
 		        var_x1 := coalesce(var_x1, var_x0);
 		    end if;
 		
 		    -- цикл по высотам
 		    for rec in select id, height from public.calc_correction_heights order by height
 		    loop
-		        -- (TT)
+		        -- температура
 		        var_sum := 0;
-		        
-		        -- получаем значение для десятков (заголовок ищем по var_type_temp_head)
 		        if var_tens > 0 then 
 		            select hv.position into var_pos from public.header_values hv where hv.type_id = var_type_temp_head and hv.head_value = var_tens;
 		            select c.row_values into var_row from public.calc_correction c where c.type_id = var_type_temp and c.height_id = rec.id;
 		            var_sum := var_sum + coalesce(var_row[var_pos], 0);
 		        end if;
 		
-		        -- получаем значение для единиц (заголовок ищем по var_type_temp_head)
 		        if var_units > 0 then 
 		            select hv.position into var_pos from public.header_values hv where hv.type_id = var_type_temp_head and hv.head_value = var_units;
 		            select c.row_values into var_row from public.calc_correction c where c.type_id = var_type_temp and c.height_id = rec.id;
 		            var_sum := var_sum + coalesce(var_row[var_pos], 0);
 		        end if;
 		
-		        -- (HH и CC)
+		        -- ветер
 		        if var_zero_wind then
 		            var_speed := 0;
 		            var_shift := 0;
 		        else
-		            -- получаем скорость для x0
 		            select hv.position into var_pos from public.header_values hv where hv.type_id = var_type_speed and hv.head_value = var_x0;
 		            select c.row_values into var_row from public.calc_correction c where c.type_id = var_type_speed and c.height_id = rec.id;
 		            var_y0 := coalesce(var_row[var_pos], 0);
 		
-		            -- получаем скорость для x1
 		            select hv.position into var_pos from public.header_values hv where hv.type_id = var_type_speed and hv.head_value = var_x1;
 		            select c.row_values into var_row from public.calc_correction c where c.type_id = var_type_speed and c.height_id = rec.id;
 		            var_y1 := coalesce(var_row[var_pos], 0);
 		
-		            -- интерполяция скорости
 		            if var_x0 = var_x1 then
 		                var_speed := var_y0;
 		            else
 		                var_speed := round(public.calc_interpolation(
-		                    var_input, 
-		                    row(var_x0, var_y0, var_x1, var_y1)::public.four_points
+		                    var_input, row(var_x0, var_y0, var_x1, var_y1)::public.four_points
 		                ));
 		            end if;
 		
-		            -- приращение направления
-		            select row_values[1] into var_shift
-		            from public.calc_correction 
-		            where type_id = var_type_dir and height_id = rec.id;
-		            
+		            select row_values[1] into var_shift from public.calc_correction where type_id = var_type_dir and height_id = rec.id;
 		            var_shift := coalesce(var_shift, 0);
 		        end if;
 		
-		        -- запись строки результата
+		        -- запись результата
 		        insert into temp_meteo_out (height_m, h, tt, hh, cc) values (
 		            rec.height,
 		            lpad((rec.height / 100)::text, 2, '0'),
-		            case when var_delta_t0 < 0 then lpad((abs(var_sum) + 50)::text, 2, '0') else lpad(var_sum::text, 2, '0') end,
-		            case when var_zero_wind then '00' else lpad((((par_params.wind_direction + var_shift) % 60 + 60) % 60)::text, 2, '0') end,
+		            case when var_delta_t0 < 0 then lpad((abs(var_sum) + var_const_offset)::text, 2, '0') else lpad(var_sum::text, 2, '0') end,
+		            case when var_zero_wind then '00' else lpad((((par_params.wind_direction + var_shift) % var_const_circle + var_const_circle) % var_const_circle)::text, 2, '0') end,
 		            case when var_zero_wind then '00' else lpad(var_speed::text, 2, '0') end
 		        );
 		    end loop;
 		end;
 		$proc$;
-	
 	end;
 		
 end $$;
